@@ -92,10 +92,19 @@ if(typeof document !== "undefined") {
             delete localStorage.token;
     });
 
-    if(localStorage.token) {
+    let searchParams = new URLSearchParams(window.location.search);
+    if(searchParams.has("token")) {
+        input.value = searchParams.get("token") as string;
+        setToken();
+
+        searchParams.delete("token");
+        let searchStr = searchParams.toString();
+        if(searchStr.length > 0)
+            searchStr = "?" + searchStr;
+        window.history.replaceState(null, "", window.location.pathname + searchStr + window.location.hash);
+    } else if(localStorage.token) {
         input.value = localStorage.token;
         setToken();
         remember.checked = true;
     }
-
 }
