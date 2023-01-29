@@ -46,6 +46,8 @@ if(typeof document !== "undefined") {
     const pin = document.getElementById("pin") as HTMLInputElement;
     const remember = document.getElementById("remember") as HTMLInputElement;
     const output = document.getElementById("output") as HTMLInputElement;
+    const timer = document.getElementById("timer") as HTMLInputElement;
+    const error = document.getElementById("error") as HTMLElement;
     let token : Token | null = null;
     let code : Code | null = null;
 
@@ -60,54 +62,62 @@ if(typeof document !== "undefined") {
 
     let setToken = function() {
         // Token
-        try {
-            switch(version.value) {
-                case "2":
-                    token = v2(input.value, password.value, devId.value);
-                    break;
-                case "3":
-                    token = v3(input.value, password.value, devId.value);
-                    break;
-                case "4":
-                default:
-                    token = v4(input.value, password.value, devId.value);
-                    break;
+        if(input.value) {
+            try {
+                switch(version.value) {
+                    case "2":
+                        token = v2(input.value, password.value, devId.value);
+                        break;
+                    case "3":
+                        token = v3(input.value, password.value, devId.value);
+                        break;
+                    case "4":
+                    default:
+                        token = v4(input.value, password.value, devId.value);
+                        break;
+                }
+                input.classList.add("valid");
+                devId.classList.add("valid");
+                password.classList.add("valid");
+    
+                if(token.flags.deviceIdIsRequired)
+                    devIdDiv.classList.remove("hidden");
+                else
+                    devIdDiv.classList.add("hidden");
+    
+                if(token.flags.passwordIsRequired)
+                    passwordDiv.classList.remove("hidden");
+                else
+                    passwordDiv.classList.add("hidden");
+    
+                error.classList.add("hidden");
+            } catch(e) {
+                error.getElementsByTagName("span")[0].textContent = e.message;
+                error.classList.remove("hidden");
+    
+                token = null;
+                input.classList.remove("valid");
+                if(e.message.includes("devid_hash") || e.message.includes("device ID of length")) {
+                    devId.classList.remove("valid");
+                    devIdDiv.classList.remove("hidden");
+                }
+                if(e.message.includes("pass_hash") || e.message.includes("decryptedSeedHash")) {
+                    password.classList.remove("valid");
+                    passwordDiv.classList.remove("hidden");
+                }
+    
+                if(e.message == "Missing deviceId")
+                    devIdDiv.classList.remove("hidden");
+                if(e.message == "Missing password")
+                    passwordDiv.classList.remove("hidden");
+                    
+                if(e.message == "Token too short") {
+                    devIdDiv.classList.add("hidden");
+                    passwordDiv.classList.add("hidden");
+                }
             }
-            input.classList.add("valid");
-            devId.classList.add("valid");
-            password.classList.add("valid");
-
-            if(token.flags.deviceIdIsRequired)
-                devIdDiv.classList.remove("hidden");
-            else
-                devIdDiv.classList.add("hidden");
-
-            if(token.flags.passwordIsRequired)
-                passwordDiv.classList.remove("hidden");
-            else
-                passwordDiv.classList.add("hidden");
-        } catch(e) {
-            console.log("Error loading token", e);
-            token = null;
-            input.classList.remove("valid");
-            if(e.message.includes("devid_hash") || e.message.includes("device ID of length")) {
-                devId.classList.remove("valid");
-                devIdDiv.classList.remove("hidden");
-            }
-            if(e.message.includes("pass_hash") || e.message.includes("decryptedSeedHash")) {
-                password.classList.remove("valid");
-                passwordDiv.classList.remove("hidden");
-            }
-
-            if(e.message == "Missing deviceId")
-                devIdDiv.classList.remove("hidden");
-            if(e.message == "Missing password")
-                passwordDiv.classList.remove("hidden");
-                
-            if(e.message == "Token too short") {
-                devIdDiv.classList.add("hidden");
-                passwordDiv.classList.add("hidden");
-            }
+        } else {
+            error.classList.add("hidden");
         }
 
         // PIN
@@ -127,7 +137,9 @@ if(typeof document !== "undefined") {
     }
     
     setInterval(function() {
-        if(code && code.expiresAt < new Date()) {
+        const now = new Date();
+        timer.value = now.getSeconds().toString();
+        if(code && code.expiresAt < now) {
             updateOutput();
         }
     }, 1000);
