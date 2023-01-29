@@ -10,18 +10,20 @@ const decrypt = (token: any, password: string = '', deviceId: string = ''): Toke
     if (!password && token.flags.passwordIsRequired) throw new Error('Missing password');
     if (!deviceId && token.flags.deviceIdIsRequired) throw new Error('Missing deviceId');
 
-    let hash = computeHash('', deviceId, token._nonce);
+    const deviceIdClean = deviceId.replace(/[^\da-f]/gi, "").toUpperCase();
+
+    let hash = computeHash('', deviceIdClean, token._nonce);
     if (hash.compare(token._nonce_devid_hash) != 0) throw new Error('Mismatching _nonce_devid_hash');
 
-    hash = computeHash(password, deviceId, token._nonce);
+    hash = computeHash(password, deviceIdClean, token._nonce);
     if (hash.compare(token._nonce_devid_pass_hash) != 0) throw new Error('Mismatching _nonce_devid_pass_hash');
 
-    const hmacKey = deriveKey(password, deviceId, token._nonce, 0);
+    const hmacKey = deriveKey(password, deviceIdClean, token._nonce, 0);
     
     hash = sha256Hmac(hmacKey, toBytes(token, false));
     if (hash.compare(token._mac) != 0) throw new Error('Mismatching _mac');
 
-    hash = deriveKey(password, deviceId, token._nonce, 1);
+    hash = deriveKey(password, deviceIdClean, token._nonce, 1);
     let payload = aes256CBCDecrypt(hash.slice(0, 32), token._enc_payload, token._nonce);
     if (payload.length < 160) throw new Error('Payload too short');
 
