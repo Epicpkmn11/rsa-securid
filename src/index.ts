@@ -35,3 +35,67 @@ export interface Code {
     expiresAt: Date,
     code: string
 }
+
+if(typeof document !== "undefined") {
+    const input = document.getElementById("input") as HTMLInputElement;
+    const pin = document.getElementById("pin") as HTMLInputElement;
+    const remember = document.getElementById("remember") as HTMLInputElement;
+    const output = document.getElementById("output") as HTMLInputElement;
+    let token : Token | null = null;
+    let code : Code | null = null;
+
+    let updateOutput = function() {
+        if(token && pin.value.length >= 4 && pin.value.length <= 8) {
+            code = token.computeCode(pin.value);
+            output.value = code.code;
+        } else {
+            output.value = "";
+        }
+    }
+
+    let setToken = function() {
+        try {
+            token = v4(input.value);
+            input.classList.add("valid");
+        } catch(e) {
+            token = null;
+            input.classList.remove("valid");
+        }
+        
+        if(remember.checked)
+            localStorage.token = input.value;
+
+        updateOutput();
+    }
+    
+    setInterval(function() {
+        if(code && code.expiresAt < new Date()) {
+            updateOutput();
+        }
+    }, 1000);
+    
+    input.addEventListener("change", setToken);
+
+    pin.addEventListener("change", function() {
+        if(pin.value.length >= 4 && pin.value.length <= 8)
+            pin.classList.add("valid");
+        else
+            pin.classList.remove("valid");
+
+        updateOutput();
+    });
+
+    remember.addEventListener("change", function() {
+        if(remember.checked)
+            localStorage.token = input.value;
+        else
+            delete localStorage.token;
+    });
+
+    if(localStorage.token) {
+        input.value = localStorage.token;
+        setToken();
+        remember.checked = true;
+    }
+
+}
